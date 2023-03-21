@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.Release.Name }}-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.Release.Name }}
+    spec:
+      containers:
+      - name: {{ .Values.Release.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        command: ["python"]
+        args: ["/app/jiralert_api.py"]
+        resources:
+          limits:
+            memory: "{{ .Values.resources.limits.memory }}"
+            cpu: "{{ .Values.resources.limits.cpu }}"
+        ports:
+        - containerPort: {{ .Values.container.port }}
+        env:
+          - name: PROMETHEUS_URL
+            value: "{{ .Values.Configuration.prometheus_url }}"
+          - name: JIRA_URL
+            value: "{{ .Values.Configuration.jira_url }}"
+          - name: USERNAME
+            value: "{{ .Values.Configuration.username }}"
+          - name: API_TOKEN
+            value: "{{ .Values.Configuration.api_token }}"
+          - name: PROJECT_KEY
+            value: "{{ .Values.Configuration.project_key }}"
+          - name: JIRA_USER_ID
+            value: "{{ .Values.Configuration.jira_user_id }}"
+        volumeMounts:
+          - name: {{ .Values.Release.Name }}-configmap-volume
+            mountPath: /app
+      volumes:
+        - name: {{ .Values.Release.Name }}-configmap-volume
+          configMap:
+            name: {{ .Values.Release.Name }}-configmap

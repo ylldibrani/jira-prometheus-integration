@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.Release.Name }}-configmap
+data:
+  jiralert_api.py: |
+    import os
+    import requests
+    import json
+    from requests.auth import HTTPBasicAuth
+
+    prometheus_url = os.environ.get("PROMETHEUS_URL")
+
+    jira_url = os.environ.get("JIRA_URL")
+
+    auth = HTTPBasicAuth(os.environ.get("USERNAME"), os.environ.get("API_TOKEN"))
+
+    headers = {
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    }
+
+    # Keep track of processed alerts to avoid creating duplicates
+    processed_alerts = set()
+    while True:
+
+        # Get all alerts from Prometheus alertmanager
+        prometheus_response = requests.request(
+            "GET",
+            os.environ.get("PROMETHEUS_URL"),
+            headers=headers
+        )
+
+        # Parse the alert data/json code from Prometheus alertmanager api url
+        alerts = prometheus_response.json()
+        if not alerts["data"]:
+            break
+
+        # Loop through the alerts and create a Jira issue for each alert
+        for alert in alerts["data"]:
+
+            # Get the alert name and description from the json format code 
+            alert_id = alert["fingerprint"]
+
+            if alert_id in processed_alerts:
+                continue
+
+            alert_name = alert["labels"]["alertname"]
+            description = alert["annotations"]["description"]
+
+            # Create the payload for Jira API request
+            payload = json.dumps({
+                "fields": {
+                    "project": {
+                        "key": os.environ.get("PROJECT_KEY")
+                    },
+                    "summary": alert_name,
+                    "description": {
+                        "type": "doc",
+                        "version": 1,
+                        "content": [
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": description
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "issuetype": {
+                        "name": "Bug"
+                    },
+                    "assignee": {
+                        "id": os.environ.get("JIRA_USER_ID")
+                    }
+                }
+            })
+
+            # Send alert to jira api request
+            jira_response = requests.request(
+                "POST",
+                jira_url,
+                data=payload,
+                headers=headers,
+                auth=auth
+            )
+
+            # Print result that our api finished successfully with details
+            print(json.dumps(jira_response.json(), sort_keys=True, indent=4, separators=(",", ": ")))
+
+            # Add the alert to the processed alerts set
+            processed_alerts.add(alert_id)
