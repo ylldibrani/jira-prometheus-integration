@@ -1,0 +1,21 @@
+Release:
+  Name: jiralert-python-api
+Configuration:
+  prometheus_url: "PROMETHEUS_ALERTMANAGER_SVC_LINK"
+  jira_url: "JIRA_API_URL"
+  username: "yll.dibrani@mdoc.one"
+  api_token: "TOKEN"
+  project_key: "PROJECT_KEY"
+  jira_user_id: "USER_ID"
+
+image:
+  repository: ylldibrani/python-3-8
+  tag: requests
+
+replicas: 1
+resources:
+  limits:
+    memory: "128Mi"
+    cpu: "500m"
+container:
+  port: 5000

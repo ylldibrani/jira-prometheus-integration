@@ -1,0 +1,7 @@
+apiVersion: v2
+name: jiralert-python-api
+version: 0.1.0
+descriptio: An application to receive alerts from Prometheus Alertmanager and create Jira issues using api in python
+maintainer:
+  - name: YllDibrani
+    url: https://github.com/ylldibrani
